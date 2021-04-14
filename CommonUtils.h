@@ -18,6 +18,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/impl/point_types.hpp>
 #include <pcl/point_types.h>
 
 
@@ -29,6 +30,21 @@ struct OBB_BOX{
     Vector3f minVertex;
     Vector3f maxVertex;
 };
+pcl::PointXYZRGBA ToPclColorVec(const Eigen::Vector3f& v ,const uint32_t rgba);
+struct DrawableBox{
+    vector<Eigen::Vector3f> boxPoint;
+    vector<std::pair<int, int>> indeies;
+    void Draw(boost::shared_ptr<pcl::visualization::PCLVisualizer>& viewer,const std::string& prefixName,
+              uint32_t rgba = 0xffffffff){
+        for (int i = 0; i < indeies.size(); i++) {
+            pcl::PointXYZRGBA l1, l2;
+            l1 = ToPclColorVec(boxPoint[indeies[i].first],rgba);
+            l2 = ToPclColorVec(boxPoint[indeies[i].second],rgba);
+            viewer->addLine(l1, l2,prefixName + std::to_string(i));
+        }
+    }
+};
+
 std::vector<Eigen::Vector3f> ReadPointCloudFromFile(const char* filePath){
     assert(filePath!= nullptr);
     std::vector<Eigen::Vector3f> pc;
@@ -58,6 +74,7 @@ void GetWidthAndHeight(int totalCount,int& width,int& height){
     height = totalCount /width;
     assert((width*height)==totalCount);
 }
+
 void GetBoxLines(const OBB_BOX& box,vector<Eigen::Vector3f>& boxPoint,vector<std::pair<int,int>>& indeies) {
 
     boxPoint.resize(8);
@@ -93,6 +110,11 @@ void GetBoxLines(const OBB_BOX& box,vector<Eigen::Vector3f>& boxPoint,vector<std
     indeies[10] = std::pair<int, int>(2, 6);
     indeies[11] = std::pair<int, int>(3, 7);
 
+}
+DrawableBox GetDrawableBox(const OBB_BOX& box){
+    DrawableBox drawableBox;
+    GetBoxLines(box,drawableBox.boxPoint,drawableBox.indeies);
+    return drawableBox;
 }
 OBB_BOX OBB(vector<Vector3f> points) {
     OBB_BOX obbBox;
@@ -199,6 +221,14 @@ Eigen::Vector3f ToEigenVec(const pcl::PointXYZ& p){
 pcl::PointXYZ ToPclVec(const Eigen::Vector3f& v ){
     return pcl::PointXYZ(v.x(),v.y(),v.z());
 }
+pcl::PointXYZRGBA ToPclColorVec(const Eigen::Vector3f& v ,const uint32_t rgba){
+     pcl::PointXYZRGBA pclPoint;
+     pclPoint.x = v.x();
+     pclPoint.y = v.y();
+     pclPoint.z = v.z();
+     pclPoint.rgba = rgba;
+     return pclPoint;
+}
 void AddNoiseToPointCloud( const pcl::PointCloud<pcl::PointXYZ>& cloud, pcl::PointCloud<pcl::PointXYZ>& dest){
     int pointSize = cloud.size();
     dest.resize(pointSize);
@@ -248,5 +278,21 @@ pcl::PointCloud<pcl::PointXYZ> ToPCLVecArray(const std::vector<Eigen::Vector3f>&
     }
     return ans;
 }
+pcl::PointCloud<pcl::PointXYZRGBA> ToPCLColorVecArray(const std::vector<Eigen::Vector3f>& eigVec,uint32_t rgba){
+    int size = eigVec.size();
+    pcl::PointCloud<pcl::PointXYZRGBA> ans;
+    int width = 0;
+    int height = 0;
+    GetWidthAndHeight(size, width, height);
+    ans.width = width;
+    ans.height = height;
+    ans.is_dense = true;
+    ans.points.resize(size);
+    for(int i=0;i<size;i++){
+        ans[i] = ToPclColorVec(eigVec[i],rgba);
+    }
+    return ans;
+}
+
 
 #endif //PCL_SHOW_COMMONUTILS_H

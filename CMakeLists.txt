@@ -8,6 +8,6 @@ add_definitions(${PCL_DEFINITIONS})
 
 find_package(Eigen3)
 
-add_executable(pcl_show main.cpp CommonUtils.h)
+add_executable(pcl_show main.cpp CommonUtils.h ICP.h)
 target_link_libraries(pcl_show ${PCL_LIBRARIES})
 target_link_libraries (pcl_show Eigen3::Eigen)
